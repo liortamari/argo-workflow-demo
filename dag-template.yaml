@@ -1,0 +1,74 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  namespace: argo
+  name: demo-dag
+spec:
+  artifactRepositoryRef:
+    configMap: artifact-repository
+    key: default-v1-s3-artifact-repository
+
+  entrypoint: dag-demo
+  templates:
+  - name: dag-demo
+    dag:
+      tasks:
+      - name: Generate
+        template: generate-ids-task
+      - name: Partition
+        template: partition-ids-task
+        dependencies: [Generate]
+        arguments:
+          artifacts: [{name: text-ids-in, from: "{{tasks.Generate.outputs.artifacts.text-ids-out}}" }]
+      - name: Process
+        template: process-ids-task
+        dependencies: [Partition]
+        arguments:
+          parameters:
+          - name: batch
+            value: "{{item.batch}}"
+          - name: ids
+            value: "{{item.ids}}"
+        withParam: "{{tasks.Partition.outputs.result}}"
+
+  - name: generate-ids-task
+    script:
+      image: python:3.9.5-slim-buster
+      command: [python]
+      source: |
+        from uuid import uuid4
+        with open('/tmp/text-ids-out', 'w') as f:
+          for guid in (uuid4().hex for _ in range(100)):
+            f.write(guid)
+            f.write('\n')
+    outputs:
+      artifacts:
+      - name: text-ids-out
+        path: /tmp/text-ids-out
+
+  - name: partition-ids-task
+    inputs:
+      artifacts:
+      - name: text-ids-in
+        path: /tmp/text-ids-in
+    script:
+      image: python:3.9.5-slim-buster
+      command: [python]
+      source: |
+        import json
+        import sys
+        batch_size = 30
+        with open('/tmp/text-ids-in', 'r') as f:
+          ids = [guid.strip('\n') for guid in f.readlines()]        
+        batches = [ids[i:i + batch_size] for i in range(0, len(ids), batch_size)]
+        json.dump([{"batch": i, "ids": ','.join(elements)} for i, elements in enumerate(batches)], sys.stdout)
+
+  - name: process-ids-task
+    inputs:
+      parameters:
+      - name: batch
+      - name: ids
+    container:
+      image: python:3.9.5-slim-buster
+      command: [python]
+      args: ["models_builfinh.pu", "{{tag}}, {{}}"]
