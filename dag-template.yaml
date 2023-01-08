@@ -6,7 +6,7 @@ metadata:
 spec:
   artifactRepositoryRef:
     configMap: artifact-repository
-    key: default-v1-s3-artifact-repository
+    key: my-artifact-repository
 
   entrypoint: dag-demo
   templates:
@@ -71,4 +71,4 @@ spec:
     container:
       image: python:3.9.5-slim-buster
       command: [python]
-      args: ["models_builfinh.pu", "{{tag}}, {{}}"]
+      args: ["-c", "print({{inputs.parameters.batch}})"]
