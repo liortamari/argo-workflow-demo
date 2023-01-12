@@ -30,7 +30,7 @@ kubectl apply -f minio-standalone.yaml
 ```
 kubectl port-forward -n minio service/minio-service 9000
 ```
-http://localhost:9000/
+http://localhost:9090/
 minioadmin minioadmin
 and create my-bucket
 
