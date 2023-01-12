@@ -28,7 +28,7 @@ kubectl apply -f minio-standalone.yaml
 ```
 ### port forward
 ```
-kubectl port-forward -n minio service/minio-service 9000
+kubectl port-forward -n minio service/minio-service 9090
 ```
 http://localhost:9090/
 minioadmin minioadmin
